@@ -135,7 +135,7 @@ function my_database_form($form, $form_state, $id = NULL) {
     );
   }
   $form['number'] = array(
-        '#title' => "Number{$id}",
+        '#title' => "Number",
         '#description' => 'Number',
         '#type' => 'textfield',
         '#default_value' => $result ? $result['number'] : '',
