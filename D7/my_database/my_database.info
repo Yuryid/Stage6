@@ -1,0 +1,5 @@
+name = My database
+description = Demonstrates work with database
+package = Other
+core = 7.x
+php = 5.3

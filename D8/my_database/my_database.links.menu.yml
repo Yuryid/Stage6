@@ -1,0 +1,11 @@
+my_database.listmenu:
+  title: 'List'
+  description: 'List table'
+  parent: main
+  route_name: my_database.list
+
+my_database.addmenu:
+  title: 'Add element'
+  description: 'Add element'
+  parent: main
+  route_name: my_database.add

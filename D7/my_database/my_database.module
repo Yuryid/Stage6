@@ -1,0 +1,243 @@
+<?php
+
+/**
+ * @file
+ * A test module that doing something.
+ */
+
+/**
+ * Implements hook_help().
+ *
+ * Displays help and module information.
+ *
+ * @param path 
+ *   Which path of the site we're using to display help
+ * @param arg 
+ *   Array that holds the current path as returned from arg() function
+ */
+
+function my_database_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#my_database":
+      return t("This is test module to my_database task."); 
+      break; 
+  }
+}
+
+/**
+ * Implements hook_menu().
+ *
+ * Enables modules to register paths.
+ */
+function my_database_menu() {
+  $items['my_database'] = array(
+    'page callback' => '_my_database_list_view',
+    'title' => 'My database',
+    'description' => 'This is table from my_database.',
+    'access callback' => TRUE,
+    'menu_name' => 'main-menu',
+  );
+  $items['my_database/list'] = array(
+        'title' => 'My database list',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'weight' => 1,
+    );
+  $items['my_database/insert'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('my_database_form'),
+    'access callback' => TRUE,
+    'title' => 'Add element',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+    'description' => 'Add element',
+  );
+  $items['my_database/update/%'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('my_database_form', 2),
+    'access callback' => TRUE,
+    'title' => 'Update element',
+    'description' => 'Udate element',
+    'type' => MENU_CALLBACK,
+
+  );
+  $items['my_database/delete/%'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('my_database_delete_form', 2),
+    'access callback' => TRUE,
+    'title' => 'Delete element',
+    'description' => 'Delete element',
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Try to show list table
+ */
+function _my_database_list_view() {
+    $txn = db_transaction();
+    try {
+      $result = db_select('custom_table', 'tbl')
+        ->fields('tbl', array('id', 'number', 'teaser', 'text'))
+        ->orderBy('id', 'ASC')
+        ->execute();
+    }
+    catch (Exception $e) {
+      // Something went wrong somewhere, so roll back now.
+      $txn->rollback();
+      // Log the exception to watchdog.
+      watchdog_exception('type', $e);
+    }
+    $content = array();
+
+    $content['message'] = array(
+      '#markup' => t('List of all elements in table.'),
+    );
+
+    $rows = array();
+    $header = array(t('Id'), t('Number'), t('Teaser'), t('Text'), t('Actions'));
+    foreach ($result as $row) {
+      // Sanitize each entry.
+      $rez_row = array_map('check_plain', (array) $row);
+
+      $link1 = l(t('edit'), "my_database/update/{$row->id}");
+      $link2 = l(t('delete'), "my_database/delete/{$row->id}");
+      $rows[] = array(
+                  $rez_row['id'],
+                  $rez_row['number'],
+                  $rez_row['teaser'],
+                  $rez_row['text'],
+                  t("{$link1} | {$link2}"),
+                );
+        }
+     return theme('table', array('header' => $header, 'rows' => $rows, 'empty' => t('No entries available.')));
+}
+
+/**
+ * Add/update form
+ */
+function my_database_form($form, $form_state, $id = NULL) {
+
+  $result = array();
+  if (!empty($id)) {
+    $result = db_select('custom_table', 'tbl')
+      ->fields('tbl')
+      ->condition('id', $id)
+      ->execute()
+      ->fetchAssoc();
+  }
+  if (!empty($id)) {
+    $form['nid'] = array(
+        '#title' => 'Id',
+        '#description' => 'Table id',
+        '#type' => 'value',
+        '#value' =>  $id,
+    );
+  }
+  $form['number'] = array(
+        '#title' => "Number{$id}",
+        '#description' => 'Number',
+        '#type' => 'textfield',
+        '#default_value' => $result ? $result['number'] : '',
+        '#required' => TRUE,
+        '#size' => 20,
+  );
+  $form['teaser'] = array(
+      '#title' => 'Teaser',
+      '#description' => 'Teaser',
+      '#type' => 'textfield',
+      '#default_value' => $result ? $result['teaser'] : '',
+      '#required' => TRUE,
+      '#size' => 20,
+  );
+  $form['text'] = array(
+      '#title' => 'Text',
+      '#description' => 'Text',
+      '#type' => 'textarea',
+      '#default_value' => $result ? $result['text'] : '',
+      '#required' => TRUE,
+  );
+
+  $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => $result ? 'Update' : 'Insert',
+  );
+
+  return $form;
+}
+
+/**
+ * Vvalidation function  for Add/update form
+ */
+function my_database_form_validate($form, &$form_state) {
+  if (strlen($form_state['values']['teaser']) < 3) {
+    form_set_error('teaser', t('The teaser is too short. Please enter bigger teaser.'));
+  }
+  if (strlen($form_state['values']['text']) < 3) {
+    form_set_error('text', t('The text is too short. Please enter longer text.'));
+  }
+  if (!intval($form_state['values']['number'])) {
+    form_set_error('number', t('Wrong number.'));
+  }
+}
+
+/**
+ * Submit function for Add/update form
+ */
+function my_database_form_submit($form, &$form_state) {
+  //id from form
+   $nid = (!empty($form_state['values']['nid'])) ? $form_state['values']['nid'] : NULL;
+
+  $txn = db_transaction();
+  try {
+    if (empty($nid)) {
+      $query = db_insert('custom_table');
+    }
+    else {
+      $query = db_update('custom_table');
+    }
+    $query->fields([
+      'number' => $form_state['values']['number'],
+      'teaser' => $form_state['values']['teaser'],
+      'text' => $form_state['values']['text'],
+    ]);
+    if (!empty($nid)) {
+      $query->condition('id', $nid);
+    }
+    $query->execute();
+  }
+  catch (Exception $e) {
+    // Something went wrong somewhere, so roll back now.
+    $txn->rollback();
+    // Log the exception to watchdog.
+    watchdog_exception('type', $e);
+  }
+  $form_state['redirect'] = 'my_database';
+}
+
+/**
+ * Delete element
+ */
+function my_database_delete_form($form, &$form_state, $id = NULL) {
+  $form = confirm_form(
+    $form,
+    t("Are you sure, Do you want to delete?"),
+    'my_database/list',
+    t('The action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
+  
+  return $form;
+ 
+}
+
+/**
+ * Delete element confirmation
+ */
+function my_database_delete_form_submit($form, &$form_state) {
+  $query = db_delete('custom_table')
+              ->condition('id', $form_state["build_info"]["args"][0])
+              ->execute();
+  drupal_goto('my_database/list');
+}

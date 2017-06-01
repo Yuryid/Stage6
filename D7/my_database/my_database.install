@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Installation functions for my_database module.
+ */
+
+/**
+ * Implements hook_schema().
+ *
+ * Defines the database tables used by this module.
+ *
+ */
+
+function my_database_schema() {
+   $schema['custom_table'] = array(
+    'description' => 'The base table.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier.',
+        'type' => 'serial',
+        'not null' => TRUE),
+      'number' => array(
+        'description' => 'Number.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0),
+      'teaser' => array(
+        'description' => 'Teaser.',
+        'type' => 'varchar',
+        'length' => 150,
+        'not null' => TRUE,
+        'default' => ''),
+      'text' => array(
+        'description' => 'The text.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'node_number' => array('number'),
+    ),
+    'unique keys' => array(
+      'number'     => array('number')
+      ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+

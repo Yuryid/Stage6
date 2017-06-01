@@ -1,0 +1,7 @@
+name: My database
+description: Demonstrates work with database
+package: Custom
+
+type: module
+core: 8.x
+
